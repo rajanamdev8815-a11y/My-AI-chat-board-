@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My API Chatbot</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; }
+        .chat-container { max-width: 500px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; }
+        .chat-box { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+        .user-msg { color: blue; text-align: right; margin: 5px 0; }
+        .bot-msg { color: green; text-align: left; margin: 5px 0; }
+        input { width: 75%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { width: 20%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <h3>My AI Chatbot</h3>
+    <div class="chat-box" id="chatBox"></div>
+    <input type="text" id="userInput" placeholder="यहाँ कुछ लिखें...">
+    <button onclick="sendMessage()">भेजें</button>
+</div>
+
+<script>
+    // ⚠️ सुरक्षा चेतावनी: इस तरीके में API Key कोड में दिखती है।
+    // अगर आप इसे GitHub पर डालेंगे तो हमेशा अपनी नई API Key का ही उपयोग करें।
+    const API_KEY = "YOUR_NEW_GROQ_API_KEY"; 
+
+    async function sendMessage() {
+        const inputField = document.getElementById("userInput");
+        const chatBox = document.getElementById("chatBox");
+        const userText = inputField.value.trim();
+        
+        if (!userText) return;
+
+        // यूजर का मैसेज दिखाएं
+        chatBox.innerHTML += `<div class="user-msg"><b>आप:</b> ${userText}</div>`;
+        inputField.value = "";
+
+        try {
+            // Groq या अन्य AI API को कॉल करना
+            const response = await fetch("https://groq.com", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${API_KEY}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: "mixtral-8x7b-32768", // या कोई भी चालू मॉडल
+                    messages: [{ role: "user", content: userText }]
+                })
+            });
+
+            const data = await response.json();
+            const botReply = data.choices[0].message.content;
+
+            // बोट का रिप्लाई दिखाएं
+            chatBox.innerHTML += `<div class="bot-msg"><b>बोट:</b> ${botReply}</div>`;
+        } catch (error) {
+            chatBox.innerHTML += `<div class="bot-msg" style="color:red;"><b>त्रुटि:</b> कनेक्शन फेल हो गया।</div>`;
+        }
+        
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+</script>
+
+</body>
+</html>
