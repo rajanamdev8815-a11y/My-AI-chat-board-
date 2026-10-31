@@ -1,70 +1,759 @@
+
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My API Chatbot</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; }
-        .chat-container { max-width: 500px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; }
-        .chat-box { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
-        .user-msg { color: blue; text-align: right; margin: 5px 0; }
-        .bot-msg { color: green; text-align: left; margin: 5px 0; }
-        input { width: 75%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { width: 20%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    </style>
-</head>
-<body>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GroqChat - GPT OSS Assistant</title>
 
-<div class="chat-container">
-    <h3>My AI Chatbot</h3>
-    <div class="chat-box" id="chatBox"></div>
-    <input type="text" id="userInput" placeholder="यहाँ कुछ लिखें...">
-    <button onclick="sendMessage()">भेजें</button>
+<style>
+:root {
+  --bg:#0b0d12;
+  --panel:#11151d;
+  --panel2:#191f2b;
+  --text:#f3f5f9;
+  --muted:#929bad;
+  --border:#252d3b;
+  --accent:#8b5cf6;
+  --accent2:#6d4aff;
+  --user:#24213a;
+  --shadow:0 15px 45px #0005;
+}
+body.light {
+  --bg:#f4f6fb;
+  --panel:#fff;
+  --panel2:#eef1f7;
+  --text:#171923;
+  --muted:#687083;
+  --border:#dfe3ec;
+  --user:#eeeaff;
+  --shadow:0 12px 35px #25304a12;
+}
+* {box-sizing:border-box}
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,system-ui,Arial,sans-serif;
+  height:100vh;
+  overflow:hidden;
+}
+button,input,textarea,select {font:inherit}
+button {cursor:pointer}
+.app {height:100vh;display:flex}
+.sidebar {
+  width:260px;
+  background:var(--panel);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  padding:18px;
+  gap:18px;
+}
+.brand {
+  display:flex;
+  align-items:center;
+  gap:11px;
+  font-size:20px;
+  font-weight:800;
+}
+.logo {
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(135deg,#9c6bff,#5540db);
+  font-size:21px;
+}
+.new-chat {
+  border:1px solid var(--border);
+  background:var(--panel2);
+  color:var(--text);
+  padding:12px;
+  border-radius:12px;
+  text-align:left;
+  font-weight:650;
+}
+.new-chat:hover,.icon-btn:hover {border-color:var(--accent)}
+.side-label {
+  font-size:11px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+.history {flex:1;overflow:auto}
+.history-item {
+  padding:10px;
+  border-radius:9px;
+  color:var(--muted);
+  font-size:13px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  cursor:pointer;
+  margin-top:5px;
+}
+.history-item:hover,.history-item.active {
+  background:var(--panel2);
+  color:var(--text);
+}
+.sidebar-bottom {
+  border-top:1px solid var(--border);
+  padding-top:14px;
+}
+.main {
+  flex:1;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+}
+.topbar {
+  height:70px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 25px;
+  gap:12px;
+}
+.model-area {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.model-select {
+  background:var(--panel2);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:10px 12px;
+  border-radius:10px;
+  max-width:260px;
+  outline:none;
+}
+.status {font-size:12px;color:var(--muted)}
+.top-actions {display:flex;gap:8px}
+.icon-btn {
+  width:39px;
+  height:39px;
+  border:1px solid var(--border);
+  border-radius:11px;
+  color:var(--text);
+  background:var(--panel);
+  font-size:17px;
+}
+.chat-area {
+  flex:1;
+  overflow-y:auto;
+  padding:30px 18px;
+}
+.messages {
+  max-width:850px;
+  margin:auto;
+  display:flex;
+  flex-direction:column;
+  gap:25px;
+}
+.welcome {
+  text-align:center;
+  margin:auto;
+  padding:70px 15px 30px;
+}
+.welcome-icon {
+  width:68px;
+  height:68px;
+  margin:0 auto 20px;
+  border-radius:22px;
+  display:grid;
+  place-items:center;
+  font-size:32px;
+  background:linear-gradient(135deg,#8b5cf6,#4936c9);
+}
+.welcome h1 {font-size:30px;margin:0 0 10px}
+.welcome p {color:var(--muted);line-height:1.7}
+.suggestions {
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin-top:25px;
+}
+.suggestion {
+  background:var(--panel);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:11px 14px;
+  border-radius:12px;
+  font-size:13px;
+}
+.suggestion:hover {border-color:var(--accent)}
+.message {
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+}
+.avatar {
+  width:34px;
+  height:34px;
+  flex-shrink:0;
+  border-radius:11px;
+  display:grid;
+  place-items:center;
+  background:var(--panel2);
+  font-size:16px;
+}
+.message.user .avatar {background:#4936a8}
+.message-content {min-width:0;flex:1}
+.message-name {
+  font-size:12px;
+  color:var(--muted);
+  margin:2px 0 8px;
+}
+.message-text {
+  font-size:15px;
+  line-height:1.8;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.message-actions {
+  display:flex;
+  gap:8px;
+  margin-top:9px;
+}
+.message-actions button {
+  background:transparent;
+  border:0;
+  color:var(--muted);
+  font-size:12px;
+  padding:4px;
+}
+.message-actions button:hover {color:var(--text)}
+.composer-wrap {padding:12px 18px 18px}
+.composer {max-width:850px;margin:auto}
+.input-box {
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:17px;
+  padding:12px 13px;
+  box-shadow:var(--shadow);
+}
+.input-box:focus-within {border-color:var(--accent)}
+#prompt {
+  width:100%;
+  resize:none;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:var(--text);
+  font-size:15px;
+  line-height:1.6;
+  min-height:30px;
+  max-height:180px;
+  padding:5px;
+}
+.input-bottom {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.input-hint {font-size:11px;color:var(--muted)}
+.send-btn {
+  width:39px;
+  height:39px;
+  border:0;
+  border-radius:12px;
+  background:var(--accent);
+  color:white;
+  font-size:18px;
+}
+.send-btn:hover {background:var(--accent2)}
+.send-btn:disabled {opacity:.5;cursor:not-allowed}
+.disclaimer {
+  text-align:center;
+  color:var(--muted);
+  font-size:11px;
+  margin-top:10px;
+}
+.mobile-menu {display:none}
+.toast {
+  position:fixed;
+  bottom:25px;
+  left:50%;
+  transform:translateX(-50%);
+  background:var(--panel2);
+  border:1px solid var(--border);
+  padding:11px 17px;
+  border-radius:10px;
+  font-size:13px;
+  display:none;
+  z-index:20;
+}
+.toast.show {display:block}
+@media(max-width:700px) {
+  .sidebar {
+    position:fixed;
+    z-index:5;
+    left:-270px;
+    top:0;
+    bottom:0;
+    transition:.25s;
+  }
+  .sidebar.open {left:0}
+  .mobile-menu {display:block}
+  .topbar {padding:0 12px;height:62px}
+  .chat-area {padding:20px 12px}
+  .welcome {padding-top:55px}
+  .welcome h1 {font-size:25px}
+  .model-select {
+    max-width:180px;
+    font-size:12px;
+    padding:9px 6px;
+  }
+  .status {display:none}
+  .composer-wrap {padding:8px 10px 12px}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="logo">✦</div>
+      GroqChat
+    </div>
+
+    <button class="new-chat" id="newChat">＋ नया चैट</button>
+
+    <div class="side-label">पुरानी बातचीत</div>
+    <div class="history" id="history"></div>
+
+    <div class="sidebar-bottom">
+      <div class="side-label">GPT OSS AI Assistant</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="model-area">
+        <button class="icon-btn mobile-menu" id="menuBtn">☰</button>
+
+        <select class="model-select" id="modelSelect">
+          <option value="openai/gpt-oss-120b">
+            GPT OSS 120B
+          </option>
+          <option value="openai/gpt-oss-20b">
+            GPT OSS 20B
+          </option>
+        </select>
+
+        <span class="status" id="status">● तैयार</span>
+      </div>
+
+      <div class="top-actions">
+        <button class="icon-btn" id="themeBtn" title="थीम बदलें">☼</button>
+      </div>
+    </header>
+
+    <section class="chat-area" id="chatArea">
+      <div class="messages" id="messages">
+        <div class="welcome">
+          <div class="welcome-icon">✦</div>
+          <h1>आपका AI Assistant</h1>
+          <p>
+            नमस्ते! मैं आपकी मदद के लिए तैयार हूँ।<br>
+            मुझसे कुछ भी पूछें।
+          </p>
+
+          <div class="suggestions">
+            <button class="suggestion">एक वेबसाइट बनाने में मदद करो</button>
+            <button class="suggestion">JavaScript आसान भाषा में समझाओ</button>
+            <button class="suggestion">एक नया बिजनेस आइडिया दो</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="composer-wrap">
+      <div class="composer">
+        <div class="input-box">
+          <textarea
+            id="prompt"
+            rows="1"
+            placeholder="अपना सवाल यहाँ लिखें..."
+          ></textarea>
+
+          <div class="input-bottom">
+            <span class="input-hint">
+              Enter भेजें · Shift + Enter नई लाइन
+            </span>
+            <button class="send-btn" id="sendBtn">➤</button>
+          </div>
+        </div>
+
+        <div class="disclaimer">
+          GPT OSS द्वारा संचालित · जवाबों की जाँच जरूर करें
+        </div>
+      </div>
+    </footer>
+  </main>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-    // ⚠️ सुरक्षा चेतावनी: इस तरीके में API Key कोड में दिखती है।
-    // अगर आप इसे GitHub पर डालेंगे तो हमेशा अपनी नई API Key का ही उपयोग करें।
-    const API_KEY = "YOUR_NEW_GROQ_API_KEY"; 
+const API_URL = "/api/chat";
 
-    async function sendMessage() {
-        const inputField = document.getElementById("userInput");
-        const chatBox = document.getElementById("chatBox");
-        const userText = inputField.value.trim();
-        
-        if (!userText) return;
+const SYSTEM_PROMPT = `
+तुम एक मददगार, समझदार और दोस्ताना AI Assistant हो।
 
-        // यूजर का मैसेज दिखाएं
-        chatBox.innerHTML += `<div class="user-msg"><b>आप:</b> ${userText}</div>`;
-        inputField.value = "";
+भाषा के नियम:
+1. हमेशा सरल और स्पष्ट हिंदी में जवाब दो।
+2. हिंदी देवनागरी लिपि में लिखो।
+3. उपयोगकर्ता अंग्रेजी या Hinglish में पूछे, तब भी हिंदी में जवाब दो।
+4. केवल programming code, technical keywords, API names और जरूरी commands अंग्रेजी में रखो।
+5. किसी दूसरी भाषा में जवाब तभी दो जब उपयोगकर्ता स्पष्ट रूप से ऐसा कहे।
+6. जवाब व्यवस्थित और उपयोगी रखो।
+7. कोड माँगे जाने पर पूरा और चलने योग्य कोड दो।
+`;
 
-        try {
-            // Groq या अन्य AI API को कॉल करना
-            const response = await fetch("https://groq.com", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${API_KEY}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    model: "mixtral-8x7b-32768", // या कोई भी चालू मॉडल
-                    messages: [{ role: "user", content: userText }]
-                })
-            });
+const $ = id => document.getElementById(id);
 
-            const data = await response.json();
-            const botReply = data.choices[0].message.content;
+let chats = [];
+try {
+  chats = JSON.parse(localStorage.getItem("groq_chats") || "[]");
+  if (!Array.isArray(chats)) chats = [];
+} catch {
+  chats = [];
+}
 
-            // बोट का रिप्लाई दिखाएं
-            chatBox.innerHTML += `<div class="bot-msg"><b>बोट:</b> ${botReply}</div>`;
-        } catch (error) {
-            chatBox.innerHTML += `<div class="bot-msg" style="color:red;"><b>त्रुटि:</b> कनेक्शन फेल हो गया।</div>`;
-        }
-        
-        chatBox.scrollTop = chatBox.scrollHeight;
+let currentChatId = null;
+let isGenerating = false;
+
+function saveChats() {
+  localStorage.setItem("groq_chats", JSON.stringify(chats));
+}
+
+function toast(message) {
+  $("toast").textContent = message;
+  $("toast").classList.add("show");
+  setTimeout(() => $("toast").classList.remove("show"), 2500);
+}
+
+function getCurrentChat() {
+  return chats.find(c => c.id === currentChatId);
+}
+
+function createChat() {
+  const chat = {
+    id: Date.now().toString(),
+    title: "नई बातचीत",
+    messages: [],
+    updatedAt: Date.now()
+  };
+
+  chats.unshift(chat);
+  currentChatId = chat.id;
+
+  saveChats();
+  renderHistory();
+  renderMessages();
+
+  $("sidebar").classList.remove("open");
+  $("prompt").focus();
+}
+
+function renderHistory() {
+  const history = $("history");
+  history.innerHTML = "";
+
+  chats.forEach(chat => {
+    const item = document.createElement("div");
+
+    item.className = "history-item" +
+      (chat.id === currentChatId ? " active" : "");
+
+    item.textContent = chat.title;
+    item.title = chat.title;
+
+    item.onclick = () => {
+      currentChatId = chat.id;
+      renderHistory();
+      renderMessages();
+      $("sidebar").classList.remove("open");
+    };
+
+    history.appendChild(item);
+  });
+}
+
+function addMessageElement(role, content) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "message " + role;
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.textContent = role === "user" ? "👤" : "✦";
+
+  const body = document.createElement("div");
+  body.className = "message-content";
+
+  const name = document.createElement("div");
+  name.className = "message-name";
+  name.textContent = role === "user" ? "आप" : "GPT OSS";
+
+  const text = document.createElement("div");
+  text.className = "message-text";
+  text.textContent = content;
+
+  body.append(name, text);
+
+  if (role === "assistant") {
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
+
+    const copy = document.createElement("button");
+    copy.textContent = "कॉपी";
+    copy.onclick = () => copyText(content);
+
+    const regenerate = document.createElement("button");
+    regenerate.textContent = "फिर से जवाब";
+    regenerate.onclick = regenerateAnswer;
+
+    actions.append(copy, regenerate);
+    body.append(actions);
+  }
+
+  wrapper.append(avatar, body);
+  $("messages").appendChild(wrapper);
+
+  return text;
+}
+
+function attachSuggestions() {
+  document.querySelectorAll(".suggestion").forEach(btn => {
+    btn.onclick = () => {
+      $("prompt").value = btn.textContent;
+      sendMessage();
+    };
+  });
+}
+
+function renderMessages() {
+  const container = $("messages");
+  container.innerHTML = "";
+
+  const chat = getCurrentChat();
+
+  if (!chat || chat.messages.length === 0) {
+    container.innerHTML = `
+      <div class="welcome">
+        <div class="welcome-icon">✦</div>
+        <h1>आपका AI Assistant</h1>
+        <p>नमस्ते! मैं आपकी मदद के लिए तैयार हूँ।<br>
+        मुझसे कुछ भी पूछें।</p>
+        <div class="suggestions">
+          <button class="suggestion">एक वेबसाइट बनाने में मदद करो</button>
+          <button class="suggestion">JavaScript आसान भाषा में समझाओ</button>
+          <button class="suggestion">एक नया बिजनेस आइडिया दो</button>
+        </div>
+      </div>`;
+
+    attachSuggestions();
+    return;
+  }
+
+  chat.messages.forEach(msg => {
+    addMessageElement(msg.role, msg.content);
+  });
+
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  $("chatArea").scrollTop = $("chatArea").scrollHeight;
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("कॉपी हो गया!");
+  } catch {
+    toast("कॉपी नहीं हो पाया");
+  }
+}
+
+async function sendMessage() {
+  if (isGenerating) return;
+
+  const input = $("prompt");
+  const userText = input.value.trim();
+
+  if (!userText) return;
+
+  if (!currentChatId) createChat();
+
+  const chat = getCurrentChat();
+
+  chat.messages.push({
+    role: "user",
+    content: userText
+  });
+
+  if (chat.messages.filter(m => m.role === "user").length === 1) {
+    chat.title = userText.slice(0, 35) +
+      (userText.length > 35 ? "..." : "");
+  }
+
+  input.value = "";
+  input.style.height = "auto";
+
+  saveChats();
+  renderHistory();
+  renderMessages();
+
+  await requestAI();
+}
+
+async function requestAI() {
+  const chat = getCurrentChat();
+  if (!chat || isGenerating) return;
+
+  isGenerating = true;
+  $("sendBtn").disabled = true;
+  $("status").textContent = "● जवाब तैयार हो रहा है...";
+
+  const selectedModel = $("modelSelect").value;
+
+  const userMessages = chat.messages.map(m => ({
+    role: m.role,
+    content: m.content
+  }));
+
+  const loadingText = addMessageElement(
+    "assistant",
+    "जवाब लिखा जा रहा है..."
+  );
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: selectedModel,
+        messages: userMessages,
+        systemPrompt: SYSTEM_PROMPT
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "API कनेक्शन में समस्या है।");
     }
-</script>
 
+    const answer = data.reply;
+
+    if (!answer) {
+      throw new Error("AI से कोई जवाब नहीं मिला।");
+    }
+
+    chat.messages.push({
+      role: "assistant",
+      content: answer
+    });
+
+    loadingText.textContent = answer;
+
+  } catch (error) {
+    loadingText.textContent =
+      "त्रुटि: " + error.message +
+      "\n\nकृपया इंटरनेट और सर्वर सेटिंग जाँचें।";
+
+    toast("जवाब प्राप्त नहीं हुआ");
+  } finally {
+    isGenerating = false;
+    $("sendBtn").disabled = false;
+    $("status").textContent = "● तैयार";
+
+    chat.updatedAt = Date.now();
+    saveChats();
+    renderHistory();
+    scrollToBottom();
+  }
+}
+
+function regenerateAnswer() {
+  if (isGenerating) return;
+
+  const chat = getCurrentChat();
+  if (!chat || !chat.messages.length) return;
+
+  if (chat.messages[chat.messages.length - 1].role === "assistant") {
+    chat.messages.pop();
+  }
+
+  if (!chat.messages.length ||
+      chat.messages[chat.messages.length - 1].role !== "user") {
+    toast("दोबारा जवाब देने के लिए सवाल उपलब्ध नहीं है");
+    return;
+  }
+
+  renderMessages();
+  requestAI();
+}
+
+$("sendBtn").onclick = sendMessage;
+
+$("prompt").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+$("prompt").addEventListener("input", () => {
+  $("prompt").style.height = "auto";
+  $("prompt").style.height =
+    Math.min($("prompt").scrollHeight, 180) + "px";
+});
+
+$("newChat").onclick = createChat;
+
+$("themeBtn").onclick = () => {
+  document.body.classList.toggle("light");
+
+  localStorage.setItem(
+    "groq_theme",
+    document.body.classList.contains("light") ? "light" : "dark"
+  );
+};
+
+$("menuBtn").onclick = () => {
+  $("sidebar").classList.toggle("open");
+};
+
+function init() {
+  if (localStorage.getItem("groq_theme") === "light") {
+    document.body.classList.add("light");
+  }
+
+  if (chats.length) {
+    currentChatId = chats[0].id;
+  } else {
+    createChat();
+  }
+
+  renderHistory();
+  renderMessages();
+}
+
+attachSuggestions();
+init();
+</script>
 </body>
 </html>
